@@ -121,21 +121,15 @@
         }
 
         /* ===== GALERIA ===== */
-        .gallery-container {
-            position: relative;
-            max-width: 90%;
-            margin: 0 auto 40px;
-        }
-
         .gallery {
             position: relative;
             width: 100%;
             aspect-ratio: 3/4;
-            /* Proporção retrato: 3:4 */
             max-height: 700px;
             border-radius: 20px;
             overflow: hidden;
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+            margin: 0 auto 40px;
         }
 
         .slide {
@@ -146,13 +140,57 @@
             background-position: center;
             background-repeat: no-repeat;
             background-color: rgba(0, 0, 0, 0.9);
-            /* Fundo escuro elegante */
             opacity: 0;
             transition: opacity 1s ease;
         }
 
         .slide.active {
             opacity: 1;
+        }
+
+        /* ===== BOTÕES DE NAVEGAÇÃO DA GALERIA ===== */
+        .gallery-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 20, 147, 0.5);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .gallery-nav:hover {
+            background: rgba(255, 20, 147, 0.8);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .prev {
+            left: 10px;
+        }
+
+        .next {
+            right: 10px;
+        }
+
+        /* Para mobile */
+        @media (max-width: 600px) {
+            .gallery-nav {
+                width: 35px;
+                height: 35px;
+                font-size: 18px;
+                background: rgba(255, 20, 147, 0.7);
+            }
         }
 
         /* ===== MENSAGEM ===== */
@@ -199,18 +237,6 @@
         }
 
         /* ===== CORAÇÕES ANIMADOS ===== */
-        @keyframes floatUp {
-            0% {
-                transform: translateY(0) scale(0.8);
-                opacity: 1;
-            }
-
-            100% {
-                transform: translateY(-100vh) scale(1.2);
-                opacity: 0;
-            }
-        }
-
         @keyframes floatRandom {
             0% {
                 transform: translateY(0) translateX(0) rotate(0deg) scale(0.8);
@@ -387,7 +413,6 @@
         const iframe = document.getElementById('spotifyFrame');
         const spotifyFallback = document.getElementById('spotifyFallback');
 
-        // Configurar timeout para fallback
         let spotifyTimeout = setTimeout(() => {
             iframe.style.display = 'none';
             spotifyFallback.style.display = 'block';
@@ -407,37 +432,83 @@
             console.log('ℹ️ Usando fallback do Spotify');
         };
 
-        /* ===== GALERIA DE FOTOS ===== */
+        /* ===== GALERIA DE FOTOS CORRIGIDA ===== */
         const gallery = document.getElementById('gallery');
         let currentIndex = 0;
+        let slides = [];
 
-        // Criar slides
+        // Limpar e criar slides
+        gallery.innerHTML = '';
+        
         photos.forEach((photo, index) => {
             const slide = document.createElement('div');
-            slide.className = `slide${index === 0 ? ' active' : ''}`;
+            slide.className = 'slide';
+            if (index === 0) slide.classList.add('active');
             slide.style.backgroundImage = `url(${photo})`;
             gallery.appendChild(slide);
         });
 
-        const slides = document.querySelectorAll('.slide');
+        // Atualizar lista de slides
+        slides = document.querySelectorAll('.slide');
 
-        // Slideshow automático
-        let galleryInterval = setInterval(() => {
+        // Função próximo slide
+        function nextSlide() {
+            if (!slides.length) return;
             slides[currentIndex].classList.remove('active');
             currentIndex = (currentIndex + 1) % slides.length;
             slides[currentIndex].classList.add('active');
-        }, 6000);
+        }
 
-        // Pausar slideshow ao interagir
+        // Função slide anterior
+        function prevSlide() {
+            if (!slides.length) return;
+            slides[currentIndex].classList.remove('active');
+            currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+            slides[currentIndex].classList.add('active');
+        }
+
+        // Slideshow automático
+        let galleryInterval = setInterval(nextSlide, 6000);
+
+        // Pausar ao interagir
         gallery.addEventListener('mouseenter', () => clearInterval(galleryInterval));
         gallery.addEventListener('touchstart', () => clearInterval(galleryInterval));
         gallery.addEventListener('mouseleave', () => {
-            galleryInterval = setInterval(() => {
-                slides[currentIndex].classList.remove('active');
-                currentIndex = (currentIndex + 1) % slides.length;
-                slides[currentIndex].classList.add('active');
-            }, 6000);
+            galleryInterval = setInterval(nextSlide, 6000);
         });
+
+        // Navegação por toque no mobile
+        let touchStartX = 0;
+        gallery.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        gallery.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].screenX;
+            const diff = touchStartX - touchEndX;
+            
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) {
+                    nextSlide();
+                } else {
+                    prevSlide();
+                }
+            }
+        });
+
+        // Criar botões de navegação
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'gallery-nav prev';
+        prevBtn.innerHTML = '❮';
+        prevBtn.onclick = prevSlide;
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'gallery-nav next';
+        nextBtn.innerHTML = '❯';
+        nextBtn.onclick = nextSlide;
+
+        gallery.appendChild(prevBtn);
+        gallery.appendChild(nextBtn);
 
         /* ===== MENSAGEM DIGITADA ===== */
         const messageEl = document.getElementById('message');
@@ -458,12 +529,10 @@
             }
 
             if (!isDeleting && charIndex === currentMessage.length) {
-                // Esperar antes de apagar
                 isDeleting = true;
                 typeTimeout = setTimeout(typeMessage, 2500);
                 return;
             } else if (isDeleting && charIndex === 0) {
-                // Próxima mensagem
                 isDeleting = false;
                 messageIndex = (messageIndex + 1) % messages.length;
             }
@@ -472,18 +541,16 @@
             typeTimeout = setTimeout(typeMessage, speed);
         }
 
-        // Iniciar digitação após carregamento
         setTimeout(typeMessage, 1000);
 
-        /* ===== SISTEMA DE CORAÇÕES OTIMIZADO ===== */
+        /* ===== SISTEMA DE CORAÇÕES ===== */
         const heartBtn = document.getElementById('heartBtn');
         const effectsContainer = document.getElementById('effects');
         let activeHearts = 0;
-        const MAX_HEARTS = 20; // Limite para evitar excesso
+        const MAX_HEARTS = 20;
 
         function createHeart(x = null, y = null) {
             if (activeHearts >= MAX_HEARTS) {
-                // Remover coração mais antigo se atingir o limite
                 const oldestHeart = effectsContainer.firstChild;
                 if (oldestHeart) {
                     oldestHeart.remove();
@@ -495,36 +562,27 @@
             heart.className = 'heart-effect';
             heart.textContent = '❤️';
 
-            // Cores aleatórias
             const colors = ['#ff69b4', '#ff1493', '#db0a5b', '#ff3385'];
             heart.style.color = colors[Math.floor(Math.random() * colors.length)];
 
-            // Posição aleatória ou baseada no clique
             if (x && y) {
-                // Se veio de clique, espalhar ao redor do ponto
                 const spread = 150;
                 const offsetX = (Math.random() - 0.5) * spread;
                 const offsetY = (Math.random() - 0.5) * spread;
                 heart.style.left = `${x + offsetX}px`;
                 heart.style.top = `${y + offsetY}px`;
             } else {
-                // Posição completamente aleatória
                 heart.style.left = `${Math.random() * 100}vw`;
                 heart.style.top = `${Math.random() * 100}vh`;
             }
 
-            // Movimento horizontal aleatório
             const moveX = (Math.random() - 0.5) * 200;
             heart.style.setProperty('--move-x', `${moveX}px`);
-
-            // Tamanho aleatório
-            const size = 20 + Math.random() * 30;
-            heart.style.fontSize = `${size}px`;
+            heart.style.fontSize = `${20 + Math.random() * 30}px`;
 
             effectsContainer.appendChild(heart);
             activeHearts++;
 
-            // Remover após animação
             setTimeout(() => {
                 if (heart.parentNode) {
                     heart.remove();
@@ -533,22 +591,18 @@
             }, 4000);
         }
 
-        // Botão principal - cria múltiplos corações
         heartBtn.addEventListener('click', (e) => {
             e.preventDefault();
-
-            // Feedback visual no botão
+            
             heartBtn.style.transform = 'scale(0.95)';
             setTimeout(() => {
                 heartBtn.style.transform = '';
             }, 200);
 
-            // Criar vários corações espalhados
             const rect = heartBtn.getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
 
-            // Criar corações em leque
             for (let i = 0; i < 8; i++) {
                 setTimeout(() => {
                     createHeart(centerX, centerY);
@@ -556,11 +610,8 @@
             }
         });
 
-        // Toque/clique na tela para criar corações
         document.addEventListener('click', (e) => {
             if (e.target === heartBtn || e.target.closest('#heartBtn')) return;
-
-            // Criar alguns corações no local do clique
             for (let i = 0; i < 3; i++) {
                 setTimeout(() => {
                     createHeart(e.clientX, e.clientY);
@@ -568,10 +619,8 @@
             }
         });
 
-        // Versão mobile-friendly para toque
         document.addEventListener('touchstart', (e) => {
             if (e.target === heartBtn || e.target.closest('#heartBtn')) return;
-
             const touch = e.touches[0];
             for (let i = 0; i < 2; i++) {
                 setTimeout(() => {
@@ -580,7 +629,6 @@
             }
         }, { passive: true });
 
-        // Criar alguns corações iniciais
         setTimeout(() => {
             for (let i = 0; i < 5; i++) {
                 setTimeout(() => createHeart(), i * 300);
@@ -594,14 +642,7 @@
             clearTimeout(spotifyTimeout);
         });
 
-        /* ===== LOG DE CARREGAMENTO ===== */
-        console.log('💖 Página romântica carregada com otimizações:');
-        console.log('✅ Spotify com fallback automático');
-        console.log('✅ Limite de ' + MAX_HEARTS + ' corações simultâneos');
-        console.log('✅ Performance otimizada para mobile');
-        console.log('✅ Efeitos visuais controlados');
+        console.log('💖 Página romântica carregada com sucesso!');
     </script>
-
 </body>
-
 </html>
